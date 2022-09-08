@@ -6,7 +6,7 @@ const compiler_1 = require("./compiler");
 const util = require('util');
 const fs = require('fs');
 var rows = (0, xlsx_1.getRows)(10);
-parseRow('44');
+parseRow('9');
 /* var errorIndexes: { id: number, index: number }[] = [
     {
         index: 5754,
