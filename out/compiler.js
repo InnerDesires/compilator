@@ -8,34 +8,67 @@ const Lexer = chevrotain.Lexer;
 const WhiteSpace = createToken({
     name: "WhiteSpace",
     pattern: /\s+/,
-    group: chevrotain.Lexer.SKIPPED
+    group: chevrotain.Lexer.SKIPPED,
 });
 const Comment = createToken({
     name: "Comment",
     pattern: /(\-\-.*)|(\/\*([^*]|[\r\n|\r|\n]|(\*+([^*/]|[\r\n|\r|\n])))*\*+\/)/,
-    group: chevrotain.Lexer.SKIPPED
+    group: chevrotain.Lexer.SKIPPED,
 });
 const SpecificComment = createToken({
     name: "SpecificComment",
     pattern: /(\'\-\-.*)/,
-    group: chevrotain.Lexer.SKIPPED
+    group: chevrotain.Lexer.SKIPPED,
 });
-const Identifier = createToken({ name: "Identifier", pattern: /([а-яА-ЯїЇїІіЄєa-zA-z])+([а-яА-ЯїЇїІіЄєa-zA-z\d])*/ });
+const Identifier = createToken({
+    name: "Identifier",
+    pattern: /([а-яА-ЯїЇїІіЄєa-zA-z])+([а-яА-ЯїЇїІіЄєa-zA-z\d])*/,
+});
 const Number = createToken({ name: "Number", pattern: /\d+(\.\d+)?/ });
-const String = createToken({ name: "String", pattern: /("(?:[^"\\]|\\"|\\)*")|('(?:[^'\\]|\\'|\\)*')/ });
-const Variable = createToken({ name: "Variable", pattern: /(змінна)|(variable)|(переменная)|(var)/ });
-const Dimension = createToken({ name: "Dimension", pattern: /(вимір)|(измерение)|(dimension)|(dim)/ });
+const String = createToken({
+    name: "String",
+    pattern: /("(?:[^"\\]|\\"|\\)*")|('(?:[^'\\]|\\'|\\)*')/,
+});
+const Variable = createToken({
+    name: "Variable",
+    pattern: /(змінна)|(variable)|(переменная)|(var)/,
+});
+const Dimension = createToken({
+    name: "Dimension",
+    pattern: /(вимір)|(измерение)|(dimension)|(dim)/,
+});
 const All = createToken({ name: "All", pattern: /(всі)|(все)|(all)/ });
-const Source = createToken({ name: "Source", pattern: /(джерело)|(источник)|(source)/ });
-const Instance = createToken({ name: "Instance", pattern: /(екземпляр)|(экземпляр)|(instance)/ });
-const Values = createToken({ name: "Values", pattern: /(значення)|(значения)|(values)/ });
-const Return = createToken({ name: "Return", pattern: /(повернути)|(возврат)|(return)/i });
-const Default = createToken({ name: "Default", pattern: /(умовчання)|(умолчание)|(default)/ });
-const Filter = createToken({ name: "Filter", pattern: /(фільтр)|(фильтр)|(filter)/ });
+const Source = createToken({
+    name: "Source",
+    pattern: /(джерело)|(источник)|(source)/,
+});
+const Instance = createToken({
+    name: "Instance",
+    pattern: /(екземпляр)|(экземпляр)|(instance)/,
+});
+const Values = createToken({
+    name: "Values",
+    pattern: /(значення)|(значения)|(values)/,
+});
+const Return = createToken({
+    name: "Return",
+    pattern: /(повернути)|(возврат)|(return)/i,
+});
+const Default = createToken({
+    name: "Default",
+    pattern: /(умовчання)|(умолчание)|(default)/,
+});
+const Filter = createToken({
+    name: "Filter",
+    pattern: /(фільтр)|(фильтр)|(filter)/,
+});
 const Iif = createToken({ name: "Iif", pattern: /(iif)|(IIF)/ });
 /* const ToInstance = createToken({ name: "ToInstance", pattern: /toInstance/ });
 const Positive = createToken({ name: "Positive", pattern: /(POSITIVE)|(positive)/ }); */
-const GreaterThanEqual = createToken({ name: "GreaterThanEqual", pattern: /(>=)|(=>)/ });
+const GreaterThanEqual = createToken({
+    name: "GreaterThanEqual",
+    pattern: /(>=)|(=>)/,
+});
 const LesserThanEqual = createToken({ name: "LesserThanEqual", pattern: /<=/ });
 const GreaterThan = createToken({ name: "GreaterThan", pattern: />/ });
 const LesserThan = createToken({ name: "LesserThan", pattern: /</ });
@@ -68,7 +101,7 @@ var AllTokens = [
     Filter,
     Iif,
     /*  ToInstance,
-     Positive, */
+       Positive, */
     String,
     Number,
     Identifier,
@@ -89,7 +122,7 @@ var AllTokens = [
     Asterisk,
     Divide,
     GreaterThan,
-    LesserThan
+    LesserThan,
 ];
 var FormulaLexer = new Lexer(AllTokens);
 function getLexingResult(input) {
@@ -98,23 +131,23 @@ function getLexingResult(input) {
 exports.getLexingResult = getLexingResult;
 class FormulaParser extends CstParser {
     constructor() {
-        super(AllTokens);
-        this.VariableDeclaration = this.RULE('VariableDeclaration', () => {
+        super(AllTokens, { nodeLocationTracking: "full" });
+        this.VariableDeclaration = this.RULE("VariableDeclaration", () => {
             this.CONSUME(Variable);
             this.AT_LEAST_ONE_SEP({
                 SEP: Comma,
                 DEF: () => {
                     this.CONSUME(Identifier);
-                }
+                },
             });
             this.CONSUME(Semicolon);
         });
-        this.SourceDeclaration = this.RULE('SourceDeclaration', () => {
+        this.SourceDeclaration = this.RULE("SourceDeclaration", () => {
             this.CONSUME(Source);
             this.CONSUME(Identifier);
             this.OPTION(() => this.CONSUME(Semicolon));
         });
-        this.DimensionSpecifier = this.RULE('DimensionSpecifier', () => {
+        this.DimensionSpecifier = this.RULE("DimensionSpecifier", () => {
             this.OR1([
                 {
                     ALT: () => {
@@ -122,68 +155,72 @@ class FormulaParser extends CstParser {
                             {
                                 ALT: () => {
                                     this.CONSUME(Default);
-                                }
+                                },
                             },
                             {
                                 ALT: () => {
                                     this.CONSUME(Instance);
-                                }
+                                },
                             },
                         ]);
                         this.OR5([
                             {
                                 ALT: () => {
                                     this.CONSUME(Identifier);
-                                }
+                                },
                             },
                             {
                                 ALT: () => {
                                     this.CONSUME1(Instance);
-                                }
-                            }
+                                },
+                            },
                         ]);
                         this.OPTION2(() => {
                             this.OR2([
                                 {
                                     ALT: () => {
                                         this.SUBRULE(this.DimensionValue);
-                                    }
+                                    },
                                 },
                                 {
                                     ALT: () => {
                                         this.CONSUME1(Arrow);
                                         this.CONSUME1(Identifier);
-                                    }
+                                    },
                                 },
                             ]);
                         });
-                    }
+                    },
                 },
                 {
                     ALT: () => {
-                        this.OPTION3(() => { this.CONSUME(All); });
-                        this.OPTION(() => { this.CONSUME(Values); });
-                    }
+                        this.OPTION3(() => {
+                            this.CONSUME(All);
+                        });
+                        this.OPTION(() => {
+                            this.CONSUME(Values);
+                        });
+                    },
                 },
                 /* {
-                    ALT: () => {
-                        this.SUBRULE(this.FilterDescription)
-                    }
-                }, */
+                          ALT: () => {
+                              this.SUBRULE(this.FilterDescription)
+                          }
+                      }, */
             ]);
         });
-        this.DimensionDeclaration = this.RULE('DimensionDeclaration', () => {
+        this.DimensionDeclaration = this.RULE("DimensionDeclaration", () => {
             this.CONSUME(Dimension);
             this.CONSUME(Identifier);
             this.SUBRULE(this.DimensionSpecifier);
             this.CONSUME(Semicolon);
         });
-        this.Dimensions = this.RULE('Dimensions', () => {
+        this.Dimensions = this.RULE("Dimensions", () => {
             this.AT_LEAST_ONE(() => {
                 this.SUBRULE(this.DimensionDeclaration);
             });
         });
-        this.DimensionValue = this.RULE('DimensionValue', () => {
+        this.DimensionValue = this.RULE("DimensionValue", () => {
             this.CONSUME(LeftParenthis);
             this.CONSUME(Filter);
             this.CONSUME(Hash);
@@ -208,14 +245,14 @@ class FormulaParser extends CstParser {
             this.SUBRULE(this.Expression);
             this.CONSUME(RightParenthis);
         });
-        this.VariableReference = this.RULE('VariableReference', () => {
+        this.VariableReference = this.RULE("VariableReference", () => {
             this.OR([
                 {
                     ALT: () => {
                         this.AT_LEAST_ONE(() => {
                             this.OR2([
                                 {
-                                    ALT: () => this.CONSUME(Colon)
+                                    ALT: () => this.CONSUME(Colon),
                                 },
                                 {
                                     ALT: () => {
@@ -224,16 +261,16 @@ class FormulaParser extends CstParser {
                                             this.CONSUME(Arrow);
                                             this.CONSUME1(Identifier);
                                         });
-                                    }
+                                    },
                                 },
                             ]);
                             this.OPTION1(() => {
                                 this.SUBRULE(this.FunctionCall);
                             });
                         });
-                    }
+                    },
                 },
-                { ALT: () => this.SUBRULE(this.FilterRefference) }
+                { ALT: () => this.SUBRULE(this.FilterRefference) },
             ]);
         });
         this.OperandSimple = this.RULE("OperandSimple", () => {
@@ -241,27 +278,25 @@ class FormulaParser extends CstParser {
                 {
                     ALT: () => {
                         this.SUBRULE(this.VariableReference);
-                    }
+                    },
                 },
                 { ALT: () => this.CONSUME(Number) },
                 { ALT: () => this.CONSUME(String) },
                 { ALT: () => this.SUBRULE(this.ParenthisExpression) },
-                { ALT: () => this.SUBRULE(this.IIFExpression) }
+                { ALT: () => this.SUBRULE(this.IIFExpression) },
             ]);
         });
         this.Operand = this.RULE("Operand", () => {
             this.OR([
                 { ALT: () => this.SUBRULE(this.OperandSimple) },
-                { ALT: () => this.SUBRULE(this.OperandWithUnary) }
+                { ALT: () => this.SUBRULE(this.OperandWithUnary) },
             ]);
         });
         this.OperandWithUnary = this.RULE("OperandWithUnary", () => {
-            this.OR([
-                { ALT: () => this.CONSUME(Minus) },
-            ]);
+            this.OR([{ ALT: () => this.CONSUME(Minus) }]);
             this.SUBRULE(this.OperandSimple);
         });
-        this.FunctionCall = this.RULE('FunctionCall', () => {
+        this.FunctionCall = this.RULE("FunctionCall", () => {
             this.CONSUME(LeftParenthis);
             this.OPTION(() => {
                 this.SUBRULE1(this.Expression);
@@ -272,12 +307,12 @@ class FormulaParser extends CstParser {
             });
             this.CONSUME(RightParenthis);
         });
-        this.FilterRefference = this.RULE('FilterRefference', () => {
+        this.FilterRefference = this.RULE("FilterRefference", () => {
             this.CONSUME(Filter);
             this.CONSUME(Hash);
             this.CONSUME(Identifier);
         });
-        this.IIFExpression = this.RULE('IIFExpression', () => {
+        this.IIFExpression = this.RULE("IIFExpression", () => {
             this.CONSUME(Iif);
             this.CONSUME(LeftParenthis);
             this.SUBRULE(this.Expression);
@@ -285,32 +320,32 @@ class FormulaParser extends CstParser {
                 {
                     ALT: () => {
                         this.CONSUME(GreaterThan);
-                    }
+                    },
                 },
                 {
                     ALT: () => {
                         this.CONSUME(LesserThan);
-                    }
+                    },
                 },
                 {
                     ALT: () => {
                         this.CONSUME(Equal);
-                    }
+                    },
                 },
                 {
                     ALT: () => {
                         this.CONSUME(NotEqual);
-                    }
+                    },
                 },
                 {
                     ALT: () => {
                         this.CONSUME(GreaterThanEqual);
-                    }
+                    },
                 },
                 {
                     ALT: () => {
                         this.CONSUME(LesserThanEqual);
-                    }
+                    },
                 },
             ]);
             this.SUBRULE3(this.Expression);
@@ -333,14 +368,17 @@ class FormulaParser extends CstParser {
             this.CONSUME(Identifier);
             this.CONSUME(Semicolon);
         });
-        this.Program = this.RULE('Program', () => {
+        this.SourceBlock = this.RULE("SourceBlock", () => {
+            this.SUBRULE(this.SourceDeclaration);
+            this.OPTION(() => this.SUBRULE(this.Dimensions));
+            this.MANY(() => this.SUBRULE(this.AssignStatement));
+        });
+        this.Program = this.RULE("Program", () => {
             this.AT_LEAST_ONE1(() => {
                 this.SUBRULE(this.VariableDeclaration);
             });
             this.AT_LEAST_ONE2(() => {
-                this.SUBRULE(this.SourceDeclaration);
-                this.OPTION(() => this.SUBRULE(this.Dimensions));
-                this.MANY(() => this.SUBRULE(this.AssignStatement));
+                this.SUBRULE(this.SourceBlock);
             });
             this.SUBRULE(this.ReturnStatement);
         });

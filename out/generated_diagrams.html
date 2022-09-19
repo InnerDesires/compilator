@@ -959,6 +959,40 @@
   },
   {
     "type": "Rule",
+    "name": "SourceBlock",
+    "orgText": "",
+    "definition": [
+      {
+        "type": "NonTerminal",
+        "name": "SourceDeclaration",
+        "idx": 0
+      },
+      {
+        "type": "Option",
+        "idx": 0,
+        "definition": [
+          {
+            "type": "NonTerminal",
+            "name": "Dimensions",
+            "idx": 0
+          }
+        ]
+      },
+      {
+        "type": "Repetition",
+        "idx": 0,
+        "definition": [
+          {
+            "type": "NonTerminal",
+            "name": "AssignStatement",
+            "idx": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "Rule",
     "name": "Program",
     "orgText": "",
     "definition": [
@@ -979,30 +1013,8 @@
         "definition": [
           {
             "type": "NonTerminal",
-            "name": "SourceDeclaration",
+            "name": "SourceBlock",
             "idx": 0
-          },
-          {
-            "type": "Option",
-            "idx": 0,
-            "definition": [
-              {
-                "type": "NonTerminal",
-                "name": "Dimensions",
-                "idx": 0
-              }
-            ]
-          },
-          {
-            "type": "Repetition",
-            "idx": 0,
-            "definition": [
-              {
-                "type": "NonTerminal",
-                "name": "AssignStatement",
-                "idx": 0
-              }
-            ]
           }
         ]
       },

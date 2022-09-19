@@ -147,7 +147,8 @@ function getLexingResult(input: string): chevrotain.ILexingResult {
 
 class FormulaParser extends CstParser {
   constructor() {
-    super(AllTokens);
+    super(AllTokens, { nodeLocationTracking: "full" });
+
     this.performSelfAnalysis();
   }
 
@@ -395,14 +396,19 @@ class FormulaParser extends CstParser {
     this.CONSUME(Identifier);
     this.CONSUME(Semicolon);
   });
+
+  SourceBlock = this.RULE("SourceBlock", () => {
+    this.SUBRULE(this.SourceDeclaration);
+    this.OPTION(() => this.SUBRULE(this.Dimensions));
+    this.MANY(() => this.SUBRULE(this.AssignStatement));
+  });
+
   Program = this.RULE("Program", () => {
     this.AT_LEAST_ONE1(() => {
       this.SUBRULE(this.VariableDeclaration);
     });
     this.AT_LEAST_ONE2(() => {
-      this.SUBRULE(this.SourceDeclaration);
-      this.OPTION(() => this.SUBRULE(this.Dimensions));
-      this.MANY(() => this.SUBRULE(this.AssignStatement));
+      this.SUBRULE(this.SourceBlock);
     });
     this.SUBRULE(this.ReturnStatement);
   });

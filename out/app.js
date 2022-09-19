@@ -2,11 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const xlsx_1 = require("./xlsx");
 const compiler_1 = require("./compiler");
+const rpnbuilder_1 = require("./rpnbuilder");
 //const prompt = require("prompt-sync")({ sigint: true });
-const util = require('util');
-const fs = require('fs');
+const util = require("util");
+const fs = require("fs");
 var rows = (0, xlsx_1.getRows)(10);
-parseRow('9');
+parseRow(process.argv[2] || "9", true);
 /* var errorIndexes: { id: number, index: number }[] = [
     {
         index: 5754,
@@ -28,12 +29,16 @@ function runTest() {
     rows.forEach((row, index) => {
         var lexingResult = (0, compiler_1.getLexingResult)(row.text);
         /* lexingResult.tokens.forEach((token: { image: string; tokenType: { name: string; }; }) => {
-            console.log({ image: token.image, type: token.tokenType.name })
-        }) */
+                console.log({ image: token.image, type: token.tokenType.name })
+            }) */
         if (lexingResult.errors.length > 0) {
             console.log(`${row.id}@${index}\n${row.text}`);
             lexingResult.tokens.forEach((token) => {
-                console.log({ image: token.image, type: token.tokenType.name, offset: token.startOffset });
+                console.log({
+                    image: token.image,
+                    type: token.tokenType.name,
+                    offset: token.startOffset,
+                });
             });
             console.log(lexingResult.errors);
         }
@@ -46,23 +51,63 @@ function runTest() {
             console.log(parser.errors[0].context.ruleOccurrenceStack);
             console.log(row.text);
             console.log(row.id);
-            prompt('Pres Enter To Continue');
+            prompt("Pres Enter To Continue");
         }
         else {
             //console.log(JSON.stringify(cst, null, 2));
         }
     });
 }
-function parseRow(id) {
-    var row = rows.find(row => row.id == id);
+function countErrors() {
+    var errors = 0;
+    rows.forEach((row, index) => {
+        var lexingResult = (0, compiler_1.getLexingResult)(row.text);
+        /* lexingResult.tokens.forEach((token: { image: string; tokenType: { name: string; }; }) => {
+                console.log({ image: token.image, type: token.tokenType.name })
+            }) */
+        if (lexingResult.errors.length > 0) {
+            console.log(`${row.id}@${index}\n${row.text}`);
+            lexingResult.tokens.forEach((token) => {
+                console.log({
+                    image: token.image,
+                    type: token.tokenType.name,
+                    offset: token.startOffset,
+                });
+            });
+            console.log(lexingResult.errors);
+        }
+        var parser = new compiler_1.FormulaParser();
+        parser.input = lexingResult.tokens;
+        let cst = parser.Program();
+        if (parser.errors.length > 0) {
+            console.log({
+                errorsCount: ++errors,
+                index: index,
+                id: row.id,
+            });
+            /* console.log(parser.errors);
+                  console.log(parser.errors[0].context.ruleStack);
+                  console.log(parser.errors[0].context.ruleOccurrenceStack);
+                  console.log(row.text); */
+        }
+        else {
+            var resultSTR = JSON.stringify(cst, null, 2);
+            console.log(resultSTR);
+        }
+    });
+}
+function parseRow(id, createFile) {
+    ;
+    var row = rows.find((row) => row.id == id);
     var lexingResult = (0, compiler_1.getLexingResult)(row.text);
-    /* lexingResult.tokens.forEach((token: { image: string; tokenType: { name: string; }; }) => {
-        console.log({ image: token.image, type: token.tokenType.name })
-    }) */
     if (lexingResult.errors.length > 0) {
         console.log(`${row.id}\n${row.text}`);
         lexingResult.tokens.forEach((token) => {
-            console.log({ image: token.image, type: token.tokenType.name, offset: token.startOffset });
+            console.log({
+                image: token.image,
+                type: token.tokenType.name,
+                offset: token.startOffset,
+            });
         });
         console.log(lexingResult.errors);
     }
@@ -75,49 +120,22 @@ function parseRow(id) {
         console.log(parser.errors[0].context.ruleOccurrenceStack);
         console.log(row.text);
         console.log(row.id);
-        prompt('Pres Enter To Continue');
+        prompt("Pres Enter To Continue");
     }
     else {
         var resultSTR = JSON.stringify(cst, null, 2);
         const fileCST = `${process.cwd()}/data//out/${row.id}.json`;
-        fs.writeFileSync(fileCST, resultSTR, { encoding: "utf-8" });
+        if (createFile) {
+            fs.writeFileSync(fileCST, resultSTR, { encoding: "utf-8" });
+        }
         resultSTR = JSON.stringify(lexingResult.tokens, null, 2);
         const fileTable = `${process.cwd()}/data//out/${row.id}.table.json`;
-        fs.writeFileSync(fileTable, resultSTR, { encoding: "utf-8" });
+        const fileStatements = `${process.cwd()}/data//out/${row.id}.statements.json`;
+        if (createFile) {
+            fs.writeFileSync(fileTable, resultSTR, { encoding: "utf-8" });
+            let res = (0, rpnbuilder_1.parseExressions)(cst, row.text);
+            resultSTR = JSON.stringify(res, null, 2);
+            fs.writeFileSync(fileStatements, resultSTR, { encoding: "utf-8" });
+        }
     }
-}
-function countErrors() {
-    var errors = 0;
-    rows.forEach((row, index) => {
-        var lexingResult = (0, compiler_1.getLexingResult)(row.text);
-        /* lexingResult.tokens.forEach((token: { image: string; tokenType: { name: string; }; }) => {
-            console.log({ image: token.image, type: token.tokenType.name })
-        }) */
-        if (lexingResult.errors.length > 0) {
-            console.log(`${row.id}@${index}\n${row.text}`);
-            lexingResult.tokens.forEach((token) => {
-                console.log({ image: token.image, type: token.tokenType.name, offset: token.startOffset });
-            });
-            console.log(lexingResult.errors);
-        }
-        var parser = new compiler_1.FormulaParser();
-        parser.input = lexingResult.tokens;
-        let cst = parser.Program();
-        if (parser.errors.length > 0) {
-            console.log({
-                errorsCount: ++errors,
-                index: index,
-                id: row.id
-            });
-            /* console.log(parser.errors);
-            console.log(parser.errors[0].context.ruleStack);
-            console.log(parser.errors[0].context.ruleOccurrenceStack);
-            console.log(row.text); */
-        }
-        else {
-            var resultSTR = JSON.stringify(cst, null, 2);
-            //Clipboard.copy(resultSTR);
-            console.log(resultSTR);
-        }
-    });
 }

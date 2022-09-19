@@ -1,12 +1,13 @@
 import { getRows } from "./xlsx";
 import { getLexingResult, FormulaParser } from "./compiler";
-//const prompt = require("prompt-sync")({ sigint: true });
+import { parseExressions } from "./rpnbuilder";
+const prompt = require("prompt-sync")({ sigint: true });
 const util = require("util");
 const fs = require("fs");
 
 var rows = getRows(10);
 
-parseRow("9");
+parseRow(process.argv[2] || "9", true);
 /* var errorIndexes: { id: number, index: number }[] = [
     {
         index: 5754,
@@ -27,129 +28,138 @@ array.forEach( (el) => {
 }); */
 
 function runTest() {
-  rows.forEach((row, index) => {
-    var lexingResult = getLexingResult(row.text);
-    /* lexingResult.tokens.forEach((token: { image: string; tokenType: { name: string; }; }) => {
-            console.log({ image: token.image, type: token.tokenType.name })
-        }) */
-    if (lexingResult.errors.length > 0) {
-      console.log(`${row.id}@${index}\n${row.text}`);
-      lexingResult.tokens.forEach(
-        (token: {
-          startOffset: any;
-          image: string;
-          tokenType: { name: string };
-        }) => {
-          console.log({
-            image: token.image,
-            type: token.tokenType.name,
-            offset: token.startOffset,
-          });
+    rows.forEach((row, index) => {
+        var lexingResult = getLexingResult(row.text);
+        /* lexingResult.tokens.forEach((token: { image: string; tokenType: { name: string; }; }) => {
+                console.log({ image: token.image, type: token.tokenType.name })
+            }) */
+        if (lexingResult.errors.length > 0) {
+            console.log(`${row.id}@${index}\n${row.text}`);
+            lexingResult.tokens.forEach(
+                (token: {
+                    startOffset: any;
+                    image: string;
+                    tokenType: { name: string };
+                }) => {
+                    console.log({
+                        image: token.image,
+                        type: token.tokenType.name,
+                        offset: token.startOffset,
+                    });
+                }
+            );
+            console.log(lexingResult.errors);
         }
-      );
-      console.log(lexingResult.errors);
-    }
-    var parser = new FormulaParser();
-    parser.input = lexingResult.tokens;
-    let cst = parser.Program();
-    if (parser.errors.length > 0) {
-      console.log(parser.errors);
-      console.log(parser.errors[0].context.ruleStack);
-      console.log(parser.errors[0].context.ruleOccurrenceStack);
-      console.log(row.text);
-      console.log(row.id);
-      prompt("Pres Enter To Continue");
-    } else {
-      //console.log(JSON.stringify(cst, null, 2));
-    }
-  });
-}
-
-function parseRow(id: string, createFile: boolean) {
-  interface ParsingResult {
-    parsedTokens: chevrotain.ILexingResult,
-    parsedCST
-    error?: 
-  };
-  var row = rows.find((row) => row.id == id);
-  var lexingResult = getLexingResult(row.text);
-  if (lexingResult.errors.length > 0) {
-    console.log(`${row.id}\n${row.text}`);
-    lexingResult.tokens.forEach(
-      (token: {
-        startOffset: any;
-        image: string;
-        tokenType: { name: string };
-      }) => {
-        console.log({
-          image: token.image,
-          type: token.tokenType.name,
-          offset: token.startOffset,
-        });
-      }
-    );
-    console.log(lexingResult.errors);
-  }
-  var parser = new FormulaParser();
-  parser.input = lexingResult.tokens;
-  let cst = parser.Program();
-  if (parser.errors.length > 0) {
-    console.log(parser.errors);
-    console.log(parser.errors[0].context.ruleStack);
-    console.log(parser.errors[0].context.ruleOccurrenceStack);
-    console.log(row.text);
-    console.log(row.id);
-    prompt("Pres Enter To Continue");
-  } else {
-    var resultSTR: string = JSON.stringify(cst, null, 2);
-    const fileCST = `${process.cwd()}/data//out/${row.id}.json`;
-    fs.writeFileSync(fileCST, resultSTR, { encoding: "utf-8" });
-    resultSTR = JSON.stringify(lexingResult.tokens, null, 2);
-    const fileTable = `${process.cwd()}/data//out/${row.id}.table.json`;
-    fs.writeFileSync(fileTable, resultSTR, { encoding: "utf-8" });
-  }
-}
-function countErrors() {
-  var errors = 0;
-  rows.forEach((row, index) => {
-    var lexingResult = getLexingResult(row.text);
-    /* lexingResult.tokens.forEach((token: { image: string; tokenType: { name: string; }; }) => {
-            console.log({ image: token.image, type: token.tokenType.name })
-        }) */
-    if (lexingResult.errors.length > 0) {
-      console.log(`${row.id}@${index}\n${row.text}`);
-      lexingResult.tokens.forEach(
-        (token: {
-          startOffset: any;
-          image: string;
-          tokenType: { name: string };
-        }) => {
-          console.log({
-            image: token.image,
-            type: token.tokenType.name,
-            offset: token.startOffset,
-          });
-        }
-      );
-      console.log(lexingResult.errors);
-    }
-    var parser = new FormulaParser();
-    parser.input = lexingResult.tokens;
-    let cst = parser.Program();
-    if (parser.errors.length > 0) {
-      console.log({
-        errorsCount: ++errors,
-        index: index,
-        id: row.id,
-      });
-      /* console.log(parser.errors);
+        var parser = new FormulaParser();
+        parser.input = lexingResult.tokens;
+        let cst = parser.Program();
+        if (parser.errors.length > 0) {
+            console.log(parser.errors);
             console.log(parser.errors[0].context.ruleStack);
             console.log(parser.errors[0].context.ruleOccurrenceStack);
-            console.log(row.text); */
-    } else {
-      var resultSTR: string = JSON.stringify(cst, null, 2);
-      //Clipboard.copy(resultSTR);
-      console.log(resultSTR);
+            console.log(row.text);
+            console.log(row.id);
+            prompt("Pres Enter To Continue");
+        } else {
+            //console.log(JSON.stringify(cst, null, 2));
+        }
+    });
+}
+
+function countErrors() {
+    var errors = 0;
+    rows.forEach((row, index) => {
+        var lexingResult = getLexingResult(row.text);
+        /* lexingResult.tokens.forEach((token: { image: string; tokenType: { name: string; }; }) => {
+                console.log({ image: token.image, type: token.tokenType.name })
+            }) */
+        if (lexingResult.errors.length > 0) {
+            console.log(`${row.id}@${index}\n${row.text}`);
+            lexingResult.tokens.forEach(
+                (token: {
+                    startOffset: any;
+                    image: string;
+                    tokenType: { name: string };
+                }) => {
+                    console.log({
+                        image: token.image,
+                        type: token.tokenType.name,
+                        offset: token.startOffset,
+                    });
+                }
+            );
+            console.log(lexingResult.errors);
+        }
+        var parser = new FormulaParser();
+        parser.input = lexingResult.tokens;
+        let cst = parser.Program();
+        if (parser.errors.length > 0) {
+            console.log({
+                errorsCount: ++errors,
+                index: index,
+                id: row.id,
+            });
+            /* console.log(parser.errors);
+                  console.log(parser.errors[0].context.ruleStack);
+                  console.log(parser.errors[0].context.ruleOccurrenceStack);
+                  console.log(row.text); */
+        } else {
+            var resultSTR: string = JSON.stringify(cst, null, 2);
+            console.log(resultSTR);
+        }
+    });
+}
+
+
+function parseRow(id: string, createFile: boolean) {
+    interface ParsingResult {
+        parsedTokens: chevrotain.ILexingResult,
+        parsedCST: chevrotain.CstNode,
+        error?: chevrotain.ILexingError[] | any;
+    };
+    var row = rows.find((row) => row.id == id);
+    var lexingResult = getLexingResult(row.text);
+    if (lexingResult.errors.length > 0) {
+        console.log(`${row.id}\n${row.text}`);
+        lexingResult.tokens.forEach(
+            (token: {
+                startOffset: any;
+                image: string;
+                tokenType: { name: string };
+            }) => {
+                console.log({
+                    image: token.image,
+                    type: token.tokenType.name,
+                    offset: token.startOffset,
+                });
+            }
+        );
+        console.log(lexingResult.errors);
     }
-  });
+    var parser = new FormulaParser();
+    parser.input = lexingResult.tokens;
+    let cst = parser.Program();
+    if (parser.errors.length > 0) {
+        console.log(parser.errors);
+        console.log(parser.errors[0].context.ruleStack);
+        console.log(parser.errors[0].context.ruleOccurrenceStack);
+        console.log(row.text);
+        console.log(row.id);
+        prompt("Pres Enter To Continue");
+    } else {
+        var resultSTR: string = JSON.stringify(cst, null, 2);
+        const fileCST = `${process.cwd()}/data//out/${row.id}.json`;
+        if (createFile) {
+            fs.writeFileSync(fileCST, resultSTR, { encoding: "utf-8" });
+        }
+        resultSTR = JSON.stringify(lexingResult.tokens, null, 2);
+        const fileTable = `${process.cwd()}/data//out/${row.id}.table.json`;
+        const fileStatements = `${process.cwd()}/data//out/${row.id}.statements.json`;
+        if (createFile) {
+            fs.writeFileSync(fileTable, resultSTR, { encoding: "utf-8" });
+            let res = parseExressions(cst, row.text);
+            resultSTR = JSON.stringify(res, null, 2);
+            fs.writeFileSync(fileStatements, resultSTR, { encoding: "utf-8" });
+        }
+    }
 }
