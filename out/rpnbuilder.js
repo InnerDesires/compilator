@@ -100,6 +100,7 @@ function operandSimpleParser(operand, builder) {
                 expressionParser(expression, builder);
                 builder.next({ type: "rightBracket", str: ')' });
             });
+            builder.outputQueue.push(`${functionCall.children["Expression"].length}`);
             builder.outputQueue.push(`#${functionName}`);
             return;
         }
@@ -108,6 +109,10 @@ function operandSimpleParser(operand, builder) {
     }
     if (operandType === "Number") {
         builder.next({ type: "operand", str: operand.children["Number"][0].image });
+        return;
+    }
+    if (operandType === "String") {
+        builder.next({ type: "operand", str: operand.children["String"][0].image });
         return;
     }
     if (operandType === "IIFExpression") {

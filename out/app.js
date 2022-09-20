@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const xlsx_1 = require("./xlsx");
 const compiler_1 = require("./compiler");
 const rpnbuilder_1 = require("./rpnbuilder");
-//const prompt = require("prompt-sync")({ sigint: true });
+const prompt = require("prompt-sync")({ sigint: true });
 const util = require("util");
 const fs = require("fs");
 var rows = (0, xlsx_1.getRows)(10);
