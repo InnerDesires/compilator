@@ -4,27 +4,11 @@ const xlsx_1 = require("./xlsx");
 const compiler_1 = require("./compiler");
 const rpnbuilder_1 = require("./rpnbuilder");
 const prompt = require("prompt-sync")({ sigint: true });
-const util = require("util");
 const fs = require("fs");
 var rows = (0, xlsx_1.getRows)(10);
-parseRow(process.argv[2] || "9", true);
-/* var errorIndexes: { id: number, index: number }[] = [
-    {
-        index: 5754,
-        id: 568726
-    }, //no source
-    { index: 5755, id: 569646 },
-    { index: 5756, id: 568727 },
-    { index: 5757, id: 569647 },
-    { index: 5758, id: 276401 },
-    { index: 5759, id: 346496 },
-    { index: 10540, id: 444678 }, //variable without assign
-    { index: 10541, id: 452668 },
-] */
-/* var array: number[] = [1033, 2054, 3033, 4104, 5055, 1454, 10440, 15000, 21033]
-array.forEach( (el) => {
-    parseRow(el)
-}); */
+var parsedFormula = parseRow(process.argv[2] || "9");
+var row = rows.find((row) => row.id == process.argv[2]);
+createFiles(parsedFormula);
 function runTest() {
     rows.forEach((row, index) => {
         var lexingResult = (0, compiler_1.getLexingResult)(row.text);
@@ -96,46 +80,109 @@ function countErrors() {
         }
     });
 }
-function parseRow(id, createFile) {
-    ;
+;
+function parseRow(id) {
     var row = rows.find((row) => row.id == id);
     var lexingResult = (0, compiler_1.getLexingResult)(row.text);
     if (lexingResult.errors.length > 0) {
-        console.log(`${row.id}\n${row.text}`);
-        lexingResult.tokens.forEach((token) => {
-            console.log({
-                image: token.image,
-                type: token.tokenType.name,
-                offset: token.startOffset,
-            });
-        });
-        console.log(lexingResult.errors);
+        var res = {
+            formula: {
+                id: row.id,
+                text: row.text
+            },
+            tokens: lexingResult.tokens,
+            cst: null,
+            statements: null,
+            errors: lexingResult.errors
+        };
+        return res;
     }
     var parser = new compiler_1.FormulaParser();
+    lexingResult.tokens;
     parser.input = lexingResult.tokens;
     let cst = parser.Program();
     if (parser.errors.length > 0) {
-        console.log(parser.errors);
-        console.log(parser.errors[0].context.ruleStack);
-        console.log(parser.errors[0].context.ruleOccurrenceStack);
-        console.log(row.text);
-        console.log(row.id);
-        prompt("Pres Enter To Continue");
+        var res = {
+            formula: {
+                id: row.id,
+                text: row.text
+            },
+            tokens: lexingResult.tokens,
+            cst: cst,
+            statements: null,
+            errors: parser.errors
+        };
+        return res;
     }
-    else {
-        var resultSTR = JSON.stringify(cst, null, 2);
-        const fileCST = `${process.cwd()}/data//out/${row.id}.json`;
-        if (createFile) {
-            fs.writeFileSync(fileCST, resultSTR, { encoding: "utf-8" });
-        }
-        resultSTR = JSON.stringify(lexingResult.tokens, null, 2);
-        const fileTable = `${process.cwd()}/data//out/${row.id}.table.json`;
-        const fileStatements = `${process.cwd()}/data//out/${row.id}.statements.json`;
-        if (createFile) {
-            fs.writeFileSync(fileTable, resultSTR, { encoding: "utf-8" });
-            let res = (0, rpnbuilder_1.parseExressions)(cst, row.text);
-            resultSTR = JSON.stringify(res, null, 2);
-            fs.writeFileSync(fileStatements, resultSTR, { encoding: "utf-8" });
-        }
+    var statements = (0, rpnbuilder_1.parseExressions)(cst, row.text);
+    var res = {
+        formula: {
+            id: row.id,
+            text: row.text
+        },
+        tokens: lexingResult.tokens,
+        cst: cst,
+        statements: statements,
+        errors: null
+    };
+    return res;
+}
+function createFiles(parsingResult, options) {
+    var resultSTR = JSON.stringify(parsingResult.cst, null, 2);
+    const fileCST = `${process.cwd()}/data//out/${parsingResult.formula.id}.json`;
+    if (!options || options.cst) {
+        fs.writeFileSync(fileCST, resultSTR, { encoding: "utf-8" });
     }
+    resultSTR = JSON.stringify(parsingResult.tokens, null, 2);
+    const fileTable = `${process.cwd()}/data//out/${parsingResult.formula.id}.table.json`;
+    const fileStatements = `${process.cwd()}/data//out/${parsingResult.formula.id}.statements.json`;
+    if (!options || options.tokens) {
+        fs.writeFileSync(fileTable, resultSTR, { encoding: "utf-8" });
+    }
+    if (!options || options.statements) {
+        resultSTR = JSON.stringify(parsingResult.statements, null, 2);
+        fs.writeFileSync(fileStatements, resultSTR, { encoding: "utf-8" });
+    }
+}
+class FormulaTableRowGenerator {
+    constructor(idf) {
+        this.IDF = idf;
+        this.N = 0;
+    }
+    row(tokenNameGroup, tokenType, image, dimensionSpecifier) {
+        var newRow = {};
+        newRow.IDF = this.IDF;
+        newRow.N = (this.N++).toString();
+        /* Automatically fills these two fields*/
+        newRow.TOKENNAMEGROUP = tokenNameGroup;
+        newRow.IMAGE = image;
+        newRow.TOKENTYPE = tokenType;
+        newRow.DIMENSIONSPECIFIER = dimensionSpecifier ? dimensionSpecifier : "";
+        return newRow;
+    }
+}
+function convertToTable(parsingResult) {
+    var rows = [];
+    var generator = new FormulaTableRowGenerator(parsingResult.formula.id);
+    if (!parsingResult.cst) {
+        return rows;
+    }
+    // pushing rows of varible declarations
+    var variablesTable = [];
+    parsingResult.cst.children.VariableDeclaration.forEach(declarationEntry => {
+        declarationEntry.children.Identifier.forEach(identifier => {
+            var image = identifier.image;
+            variablesTable.push(image);
+            rows.push(generator.row('variabledeclaration', 'Identifier', image));
+        });
+    });
+    // pushing rows of source, dimensions declaration, assing statements.
+    parsingResult.cst.children.SourceBlock.forEach((sourceBlock, SBIndex) => {
+        // pushing source dev
+        var SourceDeclaration = sourceBlock.children.SourceDeclaration[0];
+        var sourceName = SourceDeclaration.children.Identifier[0].image;
+        rows.push(generator.row('sourcedeclaration', 'SourceName', sourceName));
+        sourceBlock.children.Dimensions[0];
+    });
+    return rows;
 }

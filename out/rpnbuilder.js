@@ -96,61 +96,62 @@ function operandSimpleParser(operand, builder) {
             var functionName = varRef.children['Identifier'][0].image;
             var functionCall = varRef.children['FunctionCall'][0];
             functionCall.children["Expression"].forEach(expression => {
-                builder.next({ type: "leftBracket", str: '(' });
+                builder.next({ type: "leftBracket", str: '(', tokenType: "LeftParenthesis" });
                 expressionParser(expression, builder);
-                builder.next({ type: "rightBracket", str: ')' });
+                builder.next({ type: "rightBracket", str: ')', tokenType: "RightParenthesis" });
             });
-            builder.outputQueue.push(`${functionCall.children["Expression"].length}`);
-            builder.outputQueue.push(`#${functionName}`);
+            builder.outputQueue.push({ str: `${functionCall.children["Expression"].length}`, tokenType: 'AgrumentsCount' });
+            builder.outputQueue.push({ str: `#${functionName}`, tokenType: 'FunctionCall' });
             return;
         }
-        builder.next({ type: "operand", str: builder.rawString.slice(operand.location.startOffset, operand.location.endOffset + 1) });
+        builder.next({ type: "operand", str: builder.rawString.slice(operand.location.startOffset, operand.location.endOffset + 1), tokenType: "Identifier" });
         return;
     }
     if (operandType === "Number") {
-        builder.next({ type: "operand", str: operand.children["Number"][0].image });
+        builder.next({ type: "operand", str: operand.children["Number"][0].image, tokenType: "Number" });
         return;
     }
     if (operandType === "String") {
-        builder.next({ type: "operand", str: operand.children["String"][0].image });
+        builder.next({ type: "operand", str: operand.children["String"][0].image, tokenType: "String" });
         return;
     }
     if (operandType === "IIFExpression") {
-        builder.next({ type: "leftBracket", str: '(' });
+        builder.next({ type: "leftBracket", str: '(', tokenType: "LeftParenthesis" });
         var iif = operand.children["IIFExpression"][0];
         expressionParser(iif.children["Expression"][0], builder);
         expressionParser(iif.children["Expression"][1], builder);
-        let compareOperator = iif.children["GreaterThan"] ||
+        let compareOperator = (iif.children["GreaterThan"] ||
             iif.children["LesserThan"] ||
             iif.children["Equal"] ||
             iif.children["NotEqual"] ||
             iif.children["GreaterThanEqual"] ||
-            iif.children["LesserThanEqual"];
-        builder.outputQueue.push(compareOperator[0].image);
+            iif.children["LesserThanEqual"]);
+        console.log(compareOperator[0].tokenType.name);
+        builder.outputQueue.push({ str: compareOperator[0].image, tokenType: compareOperator[0].tokenType.name });
         expressionParser(iif.children["Expression"][2], builder);
         expressionParser(iif.children["Expression"][3], builder);
-        builder.next({ type: "rightBracket", str: ')' });
-        builder.next({ type: "operator", str: "#IIF" });
+        builder.next({ type: "rightBracket", str: ')', tokenType: "RightParenthesis" });
+        builder.next({ type: "operator", str: "#IIF", tokenType: "IIFCall" });
         return;
     }
 }
 function operatorParser(operator, builder) {
     let operatorType = Object.keys(operator.children)[0];
-    builder.next({ type: 'operator', str: operator.children[operatorType][0].image });
+    builder.next({ type: 'operator', str: operator.children[operatorType][0].image, tokenType: operatorType });
 }
 function operandWithUnaryParser(operand, builder) {
     operandSimpleParser(operand.children['OperandSimple'][0], builder);
     if (operand.children['Not']) {
-        builder.next({ type: 'operator', str: '!' });
+        builder.next({ type: 'operator', str: '!', tokenType: "Not" });
     }
     if (operand.children['Minus']) {
-        builder.next({ type: 'operator', str: '~' });
+        builder.next({ type: 'operator', str: '~', tokenType: "UnaryMinus" });
     }
 }
 function parenthisExpressionParser(expression, builder) {
-    builder.next({ type: "leftBracket", str: '(' });
+    builder.next({ type: "leftBracket", str: '(', tokenType: "LeftParenthesis" });
     expressionParser(expression.children['Expression'][0], builder);
-    builder.next({ type: "rightBracket", str: ')' });
+    builder.next({ type: "rightBracket", str: ')', tokenType: "RightParenthesis" });
 }
 class PolisBuilder {
     constructor(rawString) {
@@ -161,21 +162,21 @@ class PolisBuilder {
     next(token) {
         switch (token.type) {
             case "operator":
-                while (this.operatorStack.length > 0 && this.operatorStack[this.operatorStack.length - 1] !== '(' &&
-                    (priorityDict[this.operatorStack[this.operatorStack.length - 1]].priority > priorityDict[token.str].priority ||
-                        (priorityDict[this.operatorStack[this.operatorStack.length - 1]].priority === priorityDict[token.str].priority && priorityDict[token.str].orientation === 'left'))) {
+                while (this.operatorStack.length > 0 && this.operatorStack[this.operatorStack.length - 1].str !== '(' &&
+                    (priorityDict[this.operatorStack[this.operatorStack.length - 1].str].priority > priorityDict[token.str].priority ||
+                        (priorityDict[this.operatorStack[this.operatorStack.length - 1].str].priority === priorityDict[token.str].priority && priorityDict[token.str].orientation === 'left'))) {
                     this.outputQueue.push(this.operatorStack.pop());
                 }
-                this.operatorStack.push(token.str);
+                this.operatorStack.push({ str: token.str, tokenType: token.tokenType });
                 break;
             case "operand":
-                this.outputQueue.push(token.str);
+                this.outputQueue.push({ str: token.str, tokenType: token.tokenType });
                 break;
             case "leftBracket":
-                this.operatorStack.push(token.str);
+                this.operatorStack.push({ str: token.str, tokenType: token.tokenType });
                 break;
             case "rightBracket":
-                while (this.operatorStack[this.operatorStack.length - 1] !== "(") {
+                while (this.operatorStack[this.operatorStack.length - 1].str !== "(") {
                     this.outputQueue.push(this.operatorStack.pop());
                 }
                 this.operatorStack.pop();
