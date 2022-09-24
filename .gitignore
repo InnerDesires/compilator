@@ -1,3 +1,5 @@
 node_modules
 data/out
 ./out
+dbconfig.ts
+dbconfig.js

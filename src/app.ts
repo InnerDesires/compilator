@@ -2,6 +2,7 @@ import { getRows } from "./xlsx";
 import { getLexingResult, FormulaParser } from "./compiler";
 import { parseExressions } from "./rpnbuilder";
 import { IToken, CstNode, ILexingError, IRecognitionException, CstElement } from "chevrotain";
+import { getConnection, insert } from "./dbinsterter";
 
 const prompt = require("prompt-sync")({ sigint: true });
 const fs = require("fs");
@@ -11,15 +12,23 @@ var rows = getRows(10);
 var parsedFormula = parseRow(process.argv[2] || "255");
 var row = rows.find((row) => row.id == process.argv[2]);
 createFiles(parsedFormula);
-console.log(convertToTable(parsedFormula))
+var table = convertToTable(parsedFormula);
+var connection = getConnection();
+table.forEach(async (row) => {
+    var result = await insert(connection, row);
+    if (result) {
+        console.log('Rows Inserted: ', result);
+    }
+})
+
+
+console.log()
 
 
 function runTest() {
     rows.forEach((row, index) => {
         var lexingResult = getLexingResult(row.text);
-        /* lexingResult.tokens.forEach((token: { image: string; tokenType: { name: string; }; }) => {
-                console.log({ image: token.image, type: token.tokenType.name })
-            }) */
+
         if (lexingResult.errors.length > 0) {
             console.log(`${row.id}@${index}\n${row.text}`);
             lexingResult.tokens.forEach(
@@ -227,13 +236,14 @@ function convertToTable(parsingResult: ParsingResult): FormulaTableRow[] {
             rows.push(generator.row('variabledeclaration', 'Identifier', image));
         })
     });
-    // pushing rows of source, dimensions declaration, assing statements.
+    // adding rows of source, dimensions declaration, assing statements.
     (parsingResult.cst.children.SourceBlock as CstNode[]).forEach((sourceBlock, SBIndex) => {
-        // pushing source dev
+        // adding source deсlaration
         var SourceDeclaration = (sourceBlock.children.SourceDeclaration[0] as CstNode)
         var sourceName = (SourceDeclaration.children.Identifier[0] as IToken).image;
         rows.push(generator.row('sourceDeclaration', 'SourceName', sourceName));
 
+        //adding dimensions
         var dimensions = (sourceBlock.children.Dimensions[0] as CstNode).children.DimensionDeclaration;
         dimensions.forEach(dimension => {
             var image = ((dimension as CstNode).children.Identifier[0] as IToken).image;
@@ -243,6 +253,8 @@ function convertToTable(parsingResult: ParsingResult): FormulaTableRow[] {
                 rows.push(generator.row('dimensionDeclaration', 'DimensionName', image, specifierStr))
             }
         })
+
+        // adding asssign statements 
         sourceBlock.children.AssignStatement.forEach((statement, statementIndex) => {
             var variableImage = ((statement as CstNode).children.Identifier[0] as IToken).image;
             rows.push(generator.row('assignStatement', 'VariableName', variableImage));
@@ -261,8 +273,17 @@ function convertToTable(parsingResult: ParsingResult): FormulaTableRow[] {
             rows.push(generator.row('assignStatement', "Equal", '='));
         })
 
+        // adding return statement
+        if (parsingResult.cst) {
+            var returnStatement = (parsingResult.cst.children.ReturnStatement[0] as CstNode).children;
+            // !TODO: check if in variableTable
+            rows.push(generator.row('returnStatement', (returnStatement.Identifier[0] as IToken).image, 'VariableName'));
+            rows.push(generator.row('returnStatement', (returnStatement.Return[0] as IToken).image, 'Return'));
+        }
     });
 
 
     return rows;
 }
+
+export { FormulaTableRow } 

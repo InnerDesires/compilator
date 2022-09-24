@@ -5,6 +5,7 @@
   },
   "dependencies": {
     "chevrotain": "^10.1.2",
+    "oracledb": "^5.5.0",
     "prompt-sync": "^4.2.0",
     "ts-clipboard": "^1.0.17",
     "xlsx": "^0.18.5"

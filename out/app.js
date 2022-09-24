@@ -177,12 +177,13 @@ function convertToTable(parsingResult) {
             rows.push(generator.row('variabledeclaration', 'Identifier', image));
         });
     });
-    // pushing rows of source, dimensions declaration, assing statements.
+    // adding rows of source, dimensions declaration, assing statements.
     parsingResult.cst.children.SourceBlock.forEach((sourceBlock, SBIndex) => {
-        // pushing source dev
+        // adding source deсlaration
         var SourceDeclaration = sourceBlock.children.SourceDeclaration[0];
         var sourceName = SourceDeclaration.children.Identifier[0].image;
         rows.push(generator.row('sourceDeclaration', 'SourceName', sourceName));
+        //adding dimensions
         var dimensions = sourceBlock.children.Dimensions[0].children.DimensionDeclaration;
         dimensions.forEach(dimension => {
             var image = dimension.children.Identifier[0].image;
@@ -192,6 +193,7 @@ function convertToTable(parsingResult) {
                 rows.push(generator.row('dimensionDeclaration', 'DimensionName', image, specifierStr));
             }
         });
+        // adding asssign statements 
         sourceBlock.children.AssignStatement.forEach((statement, statementIndex) => {
             var variableImage = statement.children.Identifier[0].image;
             rows.push(generator.row('assignStatement', 'VariableName', variableImage));
@@ -210,6 +212,13 @@ function convertToTable(parsingResult) {
             });
             rows.push(generator.row('assignStatement', "Equal", '='));
         });
+        // adding return statement
+        if (parsingResult.cst) {
+            var returnStatement = parsingResult.cst.children.ReturnStatement[0].children;
+            // !TODO: check if in variableTable
+            rows.push(generator.row('returnStatement', returnStatement.Identifier[0].image, 'VariableName'));
+            rows.push(generator.row('returnStatement', returnStatement.Return[0].image, 'Return'));
+        }
     });
     return rows;
 }
