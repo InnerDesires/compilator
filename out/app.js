@@ -6,9 +6,10 @@ const rpnbuilder_1 = require("./rpnbuilder");
 const prompt = require("prompt-sync")({ sigint: true });
 const fs = require("fs");
 var rows = (0, xlsx_1.getRows)(10);
-var parsedFormula = parseRow(process.argv[2] || "9");
+var parsedFormula = parseRow(process.argv[2] || "255");
 var row = rows.find((row) => row.id == process.argv[2]);
 createFiles(parsedFormula);
+console.log(convertToTable(parsedFormula));
 function runTest() {
     rows.forEach((row, index) => {
         var lexingResult = (0, compiler_1.getLexingResult)(row.text);
@@ -144,24 +145,24 @@ function createFiles(parsingResult, options) {
         fs.writeFileSync(fileStatements, resultSTR, { encoding: "utf-8" });
     }
 }
-class FormulaTableRowGenerator {
-    constructor(idf) {
-        this.IDF = idf;
-        this.N = 0;
-    }
-    row(tokenNameGroup, tokenType, image, dimensionSpecifier) {
-        var newRow = {};
-        newRow.IDF = this.IDF;
-        newRow.N = (this.N++).toString();
-        /* Automatically fills these two fields*/
-        newRow.TOKENNAMEGROUP = tokenNameGroup;
-        newRow.IMAGE = image;
-        newRow.TOKENTYPE = tokenType;
-        newRow.DIMENSIONSPECIFIER = dimensionSpecifier ? dimensionSpecifier : "";
-        return newRow;
-    }
-}
 function convertToTable(parsingResult) {
+    class FormulaTableRowGenerator {
+        constructor(idf) {
+            this.IDF = idf;
+            this.N = 0;
+        }
+        row(tokenNameGroup, tokenType, image, dimensionSpecifier) {
+            var newRow = {};
+            newRow.IDF = this.IDF;
+            newRow.N = (this.N++).toString();
+            /* Automatically fills these two fields*/
+            newRow.TOKENNAMEGROUP = tokenNameGroup;
+            newRow.IMAGE = image;
+            newRow.TOKENTYPE = tokenType;
+            newRow.DIMENSIONSPECIFIER = dimensionSpecifier ? dimensionSpecifier : "";
+            return newRow;
+        }
+    }
     var rows = [];
     var generator = new FormulaTableRowGenerator(parsingResult.formula.id);
     if (!parsingResult.cst) {
@@ -181,8 +182,34 @@ function convertToTable(parsingResult) {
         // pushing source dev
         var SourceDeclaration = sourceBlock.children.SourceDeclaration[0];
         var sourceName = SourceDeclaration.children.Identifier[0].image;
-        rows.push(generator.row('sourcedeclaration', 'SourceName', sourceName));
-        sourceBlock.children.Dimensions[0];
+        rows.push(generator.row('sourceDeclaration', 'SourceName', sourceName));
+        var dimensions = sourceBlock.children.Dimensions[0].children.DimensionDeclaration;
+        dimensions.forEach(dimension => {
+            var image = dimension.children.Identifier[0].image;
+            var specifier = dimension.children.DimensionSpecifier[0];
+            if (specifier.location && specifier.location.endOffset) {
+                var specifierStr = parsingResult.formula.text.slice(specifier.location.startOffset, specifier.location.endOffset + 1);
+                rows.push(generator.row('dimensionDeclaration', 'DimensionName', image, specifierStr));
+            }
+        });
+        sourceBlock.children.AssignStatement.forEach((statement, statementIndex) => {
+            var variableImage = statement.children.Identifier[0].image;
+            rows.push(generator.row('assignStatement', 'VariableName', variableImage));
+            statement.children.parsingResult.forEach((_el, index) => {
+                var el = _el;
+                var tokenType = 'Error';
+                if (el.str && el.tokenType) {
+                    if (el.tokenType === 'Identifier') {
+                        tokenType = variablesTable.includes(el.str) ? 'VariableName' : 'Mnemonic';
+                    }
+                    else {
+                        tokenType = el.tokenType;
+                    }
+                }
+                rows.push(generator.row('expression', tokenType, el.str));
+            });
+            rows.push(generator.row('assignStatement', "Equal", '='));
+        });
     });
     return rows;
 }

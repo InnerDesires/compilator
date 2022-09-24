@@ -122,8 +122,8 @@ function operandSimpleParser(operand: any, builder: any) {
         return;
     }
     if (operandType === "IIFExpression") {
+        
         builder.next({ type: "leftBracket", str: '(', tokenType: "LeftParenthesis" });
-
         var iif = operand.children["IIFExpression"][0];
         expressionParser(iif.children["Expression"][0], builder);
         expressionParser(iif.children["Expression"][1], builder);
@@ -139,7 +139,7 @@ function operandSimpleParser(operand: any, builder: any) {
         expressionParser(iif.children["Expression"][2], builder);
         expressionParser(iif.children["Expression"][3], builder);
         builder.next({ type: "rightBracket", str: ')', tokenType: "RightParenthesis" });
-        builder.next({ type: "operator", str: "#IIF", tokenType: "IIFCall" });
+        builder.outputQueue.push({ str: "#IIF", tokenType: "IIFCall" });
         return;
     }
 }

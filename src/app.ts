@@ -8,9 +8,11 @@ const fs = require("fs");
 
 var rows = getRows(10);
 
-var parsedFormula = parseRow(process.argv[2] || "9");
+var parsedFormula = parseRow(process.argv[2] || "255");
 var row = rows.find((row) => row.id == process.argv[2]);
 createFiles(parsedFormula);
+console.log(convertToTable(parsedFormula))
+
 
 function runTest() {
     rows.forEach((row, index) => {
@@ -186,28 +188,29 @@ interface FormulaTableRow {
     DIMENSIONSPECIFIER: string
 }
 
-class FormulaTableRowGenerator {
-    IDF: string;
-    N: number;
-    constructor(idf: string) {
-        this.IDF = idf;
-        this.N = 0;
-    }
-    row(tokenNameGroup: string, tokenType: string, image: string, dimensionSpecifier?: string): FormulaTableRow {
-        var newRow = <FormulaTableRow>{};
 
-        newRow.IDF = this.IDF;
-        newRow.N = (this.N++).toString();
-        /* Automatically fills these two fields*/
-
-        newRow.TOKENNAMEGROUP = tokenNameGroup;
-        newRow.IMAGE = image;
-        newRow.TOKENTYPE = tokenType;
-        newRow.DIMENSIONSPECIFIER = dimensionSpecifier ? dimensionSpecifier : "";
-        return newRow;
-    }
-}
 function convertToTable(parsingResult: ParsingResult): FormulaTableRow[] {
+    class FormulaTableRowGenerator {
+        IDF: string;
+        N: number;
+        constructor(idf: string) {
+            this.IDF = idf;
+            this.N = 0;
+        }
+        row(tokenNameGroup: string, tokenType: string, image: string, dimensionSpecifier?: string): FormulaTableRow {
+            var newRow = <FormulaTableRow>{};
+
+            newRow.IDF = this.IDF;
+            newRow.N = (this.N++).toString();
+            /* Automatically fills these two fields*/
+
+            newRow.TOKENNAMEGROUP = tokenNameGroup;
+            newRow.IMAGE = image;
+            newRow.TOKENTYPE = tokenType;
+            newRow.DIMENSIONSPECIFIER = dimensionSpecifier ? dimensionSpecifier : "";
+            return newRow;
+        }
+    }
     var rows: FormulaTableRow[] = [];
     var generator = new FormulaTableRowGenerator(parsingResult.formula.id);
 
@@ -229,9 +232,34 @@ function convertToTable(parsingResult: ParsingResult): FormulaTableRow[] {
         // pushing source dev
         var SourceDeclaration = (sourceBlock.children.SourceDeclaration[0] as CstNode)
         var sourceName = (SourceDeclaration.children.Identifier[0] as IToken).image;
-        rows.push(generator.row('sourcedeclaration', 'SourceName', sourceName));
-        sourceBlock.children.Dimensions[0]
+        rows.push(generator.row('sourceDeclaration', 'SourceName', sourceName));
 
+        var dimensions = (sourceBlock.children.Dimensions[0] as CstNode).children.DimensionDeclaration;
+        dimensions.forEach(dimension => {
+            var image = ((dimension as CstNode).children.Identifier[0] as IToken).image;
+            var specifier = ((dimension as CstNode).children.DimensionSpecifier[0] as CstNode)
+            if (specifier.location && specifier.location.endOffset) {
+                var specifierStr = parsingResult.formula.text.slice(specifier.location.startOffset, specifier.location.endOffset + 1)
+                rows.push(generator.row('dimensionDeclaration', 'DimensionName', image, specifierStr))
+            }
+        })
+        sourceBlock.children.AssignStatement.forEach((statement, statementIndex) => {
+            var variableImage = ((statement as CstNode).children.Identifier[0] as IToken).image;
+            rows.push(generator.row('assignStatement', 'VariableName', variableImage));
+            (statement as CstNode).children.parsingResult.forEach((_el, index) => {
+                var el = _el as any;
+                var tokenType = 'Error';
+                if (el.str && el.tokenType) {
+                    if (el.tokenType === 'Identifier') {
+                        tokenType = variablesTable.includes(el.str) ? 'VariableName' : 'Mnemonic';
+                    } else {
+                        tokenType = el.tokenType;
+                    }
+                }
+                rows.push(generator.row('expression', tokenType, el.str))
+            })
+            rows.push(generator.row('assignStatement', "Equal", '='));
+        })
 
     });
 

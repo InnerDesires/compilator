@@ -131,7 +131,7 @@ function operandSimpleParser(operand, builder) {
         expressionParser(iif.children["Expression"][2], builder);
         expressionParser(iif.children["Expression"][3], builder);
         builder.next({ type: "rightBracket", str: ')', tokenType: "RightParenthesis" });
-        builder.next({ type: "operator", str: "#IIF", tokenType: "IIFCall" });
+        builder.outputQueue.push({ str: "#IIF", tokenType: "IIFCall" });
         return;
     }
 }
