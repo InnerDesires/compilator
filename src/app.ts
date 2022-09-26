@@ -2,7 +2,7 @@ import { getRows } from "./xlsx";
 import { getLexingResult, FormulaParser } from "./compiler";
 import { parseExressions } from "./rpnbuilder";
 import { IToken, CstNode, ILexingError, IRecognitionException, CstElement } from "chevrotain";
-import { getConnection, insert } from "./dbinsterter";
+import { getConnection, insert, closeConnection } from "./dbinsterter";
 
 const prompt = require("prompt-sync")({ sigint: true });
 const fs = require("fs");
@@ -21,9 +21,7 @@ table.forEach(async (row) => {
     }
 })
 
-
-console.log()
-
+closeConnection(connection);
 
 function runTest() {
     rows.forEach((row, index) => {

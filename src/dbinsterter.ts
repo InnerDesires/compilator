@@ -18,7 +18,8 @@ function insert(connection: any, row: FormulaTableRow) {
     return new Promise((resolve, reject) => {
         connection.execute(
             `INSERT INTO SCRUDGE3.SFORMULAPREPARE (IDF,TOKENNAMEGROUP,N,TOKENTYPE,IMAGE, DIMENSIONSPECIFIER) 
-             VALUES (${row.IDF},${row.TOKENNAMEGROUP},${row.N},${row.TOKENTYPE},${row.IMAGE},${row.DIMENSIONSPECIFIER})`, function (err: any, results: unknown) {
+             VALUES (:idf, :tknnmgrp, :n, :tknt, :img, :dimspec )`,
+              [row.IDF,row.TOKENNAMEGROUP,row.N,row.TOKENTYPE,row.IMAGE,row.DIMENSIONSPECIFIER], function (err: any, results: unknown) {
             if (err) {
                 reject(err);
             }
@@ -26,5 +27,11 @@ function insert(connection: any, row: FormulaTableRow) {
         });
     });
 }
-
-export { getConnection, insert } 
+async function closeConnection(connection: any) {
+    try {
+        await connection.close();
+    } catch (err) {
+        console.error(err);
+    }
+}
+export { getConnection, insert, closeConnection } 
