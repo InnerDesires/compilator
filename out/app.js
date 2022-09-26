@@ -1,21 +1,52 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const xlsx_1 = require("./xlsx");
 const compiler_1 = require("./compiler");
 const rpnbuilder_1 = require("./rpnbuilder");
+const dbinsterter_1 = require("./dbinsterter");
 const prompt = require("prompt-sync")({ sigint: true });
 const fs = require("fs");
 var rows = (0, xlsx_1.getRows)(10);
 var parsedFormula = parseRow(process.argv[2] || "255");
 var row = rows.find((row) => row.id == process.argv[2]);
 createFiles(parsedFormula);
-console.log(convertToTable(parsedFormula));
+var table = convertToTable(parsedFormula);
+function pushToTable() {
+    return __awaiter(this, void 0, void 0, function* () {
+        var connection = yield (0, dbinsterter_1.getConnection)();
+        table.forEach((row) => __awaiter(this, void 0, void 0, function* () {
+            var result = yield (0, dbinsterter_1.insert)(connection, row);
+            if (result) {
+                console.log('Rows Inserted: ', result);
+            }
+        }));
+        //@ts-ignore
+        connection.commit();
+        //@ts-ignore
+        (0, dbinsterter_1.closeConnection)(connection);
+    });
+}
+function test() {
+    return __awaiter(this, void 0, void 0, function* () {
+        var connection = yield (0, dbinsterter_1.getConnection)();
+        const result = yield (0, dbinsterter_1.test)(connection);
+        //@ts-ignore
+        console.log(result.rows ? result.rows : "error");
+    });
+}
+console.log(table);
 function runTest() {
     rows.forEach((row, index) => {
         var lexingResult = (0, compiler_1.getLexingResult)(row.text);
-        /* lexingResult.tokens.forEach((token: { image: string; tokenType: { name: string; }; }) => {
-                console.log({ image: token.image, type: token.tokenType.name })
-            }) */
         if (lexingResult.errors.length > 0) {
             console.log(`${row.id}@${index}\n${row.text}`);
             lexingResult.tokens.forEach((token) => {
@@ -174,7 +205,7 @@ function convertToTable(parsingResult) {
         declarationEntry.children.Identifier.forEach(identifier => {
             var image = identifier.image;
             variablesTable.push(image);
-            rows.push(generator.row('variabledeclaration', 'Identifier', image));
+            rows.push(generator.row('variableDeclaration', 'Identifier', image));
         });
     });
     // adding rows of source, dimensions declaration, assing statements.
@@ -216,8 +247,8 @@ function convertToTable(parsingResult) {
         if (parsingResult.cst) {
             var returnStatement = parsingResult.cst.children.ReturnStatement[0].children;
             // !TODO: check if in variableTable
-            rows.push(generator.row('returnStatement', returnStatement.Identifier[0].image, 'VariableName'));
-            rows.push(generator.row('returnStatement', returnStatement.Return[0].image, 'Return'));
+            rows.push(generator.row('returnStatement', 'VariableName', returnStatement.Identifier[0].image));
+            rows.push(generator.row('returnStatement', 'Return', returnStatement.Return[0].image));
         }
     });
     return rows;

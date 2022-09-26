@@ -245,7 +245,7 @@ function convertToTable(parsingResult: ParsingResult): FormulaTableRow[] {
         declarationEntry.children.Identifier.forEach(identifier => {
             var image = (identifier as IToken).image;
             variablesTable.push(image);
-            rows.push(generator.row('variabledeclaration', 'Identifier', image));
+            rows.push(generator.row('variableDeclaration', 'Identifier', image));
         })
     });
     // adding rows of source, dimensions declaration, assing statements.
@@ -285,15 +285,14 @@ function convertToTable(parsingResult: ParsingResult): FormulaTableRow[] {
             rows.push(generator.row('assignStatement', "Equal", '='));
         })
 
-        // adding return statement
-        if (parsingResult.cst) {
-            var returnStatement = (parsingResult.cst.children.ReturnStatement[0] as CstNode).children;
-            // !TODO: check if in variableTable
-            rows.push(generator.row('returnStatement', 'VariableName', (returnStatement.Identifier[0] as IToken).image));
-            rows.push(generator.row('returnStatement', 'Return', (returnStatement.Return[0] as IToken).image));
-        }
     });
-
+    // adding return statement
+    if (parsingResult.cst) {
+        var returnStatement = (parsingResult.cst.children.ReturnStatement[0] as CstNode).children;
+        // !TODO: check if in variableTable
+        rows.push(generator.row('returnStatement', 'VariableName', (returnStatement.Identifier[0] as IToken).image));
+        rows.push(generator.row('returnStatement', 'Return', (returnStatement.Return[0] as IToken).image));
+    }
 
     return rows;
 }
