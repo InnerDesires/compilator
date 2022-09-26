@@ -1,1 +1,1 @@
-"# compilator" 
+# compilator
