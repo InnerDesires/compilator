@@ -2,7 +2,7 @@ import { getRows } from "./xlsx";
 import { getLexingResult, FormulaParser } from "./compiler";
 import { parseExressions } from "./rpnbuilder";
 import { IToken, CstNode, ILexingError, IRecognitionException, CstElement } from "chevrotain";
-import { getConnection, insert, closeConnection } from "./dbinsterter";
+import { getConnection, insert, closeConnection, test as testDB } from "./dbinsterter";
 
 const prompt = require("prompt-sync")({ sigint: true });
 const fs = require("fs");
@@ -13,15 +13,29 @@ var parsedFormula = parseRow(process.argv[2] || "255");
 var row = rows.find((row) => row.id == process.argv[2]);
 createFiles(parsedFormula);
 var table = convertToTable(parsedFormula);
-var connection = getConnection();
-table.forEach(async (row) => {
-    var result = await insert(connection, row);
-    if (result) {
-        console.log('Rows Inserted: ', result);
-    }
-})
+async function pushToTable() {
+    var connection = await getConnection();
+    table.forEach(async (row) => {
+        var result = await insert(connection, row);
+        if (result) {
+            console.log('Rows Inserted: ', result);
+        }
+    })
+    //@ts-ignore
+    connection.commit();
+    //@ts-ignore
+    closeConnection(connection)
 
-closeConnection(connection);
+}
+
+async function test() {
+    var connection = await getConnection();
+    const result = await testDB(connection);
+    //@ts-ignore
+    console.log(result.rows ? result.rows : "error")
+}
+
+pushToTable();
 
 function runTest() {
     rows.forEach((row, index) => {
@@ -275,8 +289,8 @@ function convertToTable(parsingResult: ParsingResult): FormulaTableRow[] {
         if (parsingResult.cst) {
             var returnStatement = (parsingResult.cst.children.ReturnStatement[0] as CstNode).children;
             // !TODO: check if in variableTable
-            rows.push(generator.row('returnStatement', (returnStatement.Identifier[0] as IToken).image, 'VariableName'));
-            rows.push(generator.row('returnStatement', (returnStatement.Return[0] as IToken).image, 'Return'));
+            rows.push(generator.row('returnStatement', 'VariableName', (returnStatement.Identifier[0] as IToken).image));
+            rows.push(generator.row('returnStatement', 'Return', (returnStatement.Return[0] as IToken).image));
         }
     });
 
