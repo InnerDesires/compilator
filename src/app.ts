@@ -256,15 +256,18 @@ function convertToTable(parsingResult: ParsingResult): FormulaTableRow[] {
         rows.push(generator.row('sourceDeclaration', 'SourceName', sourceName));
 
         //adding dimensions
-        var dimensions = (sourceBlock.children.Dimensions[0] as CstNode).children.DimensionDeclaration;
-        dimensions.forEach(dimension => {
-            var image = ((dimension as CstNode).children.Identifier[0] as IToken).image;
-            var specifier = ((dimension as CstNode).children.DimensionSpecifier[0] as CstNode)
-            if (specifier.location && specifier.location.endOffset) {
-                var specifierStr = parsingResult.formula.text.slice(specifier.location.startOffset, specifier.location.endOffset + 1)
-                rows.push(generator.row('dimensionDeclaration', 'DimensionName', image, specifierStr))
-            }
-        })
+        if (sourceBlock.children.Dimensions) { // source block can have no dimensions declared
+            var dimensions = (sourceBlock.children.Dimensions[0] as CstNode).children.DimensionDeclaration;
+            dimensions.forEach(dimension => {
+                var image = ((dimension as CstNode).children.Identifier[0] as IToken).image;
+                var specifier = ((dimension as CstNode).children.DimensionSpecifier[0] as CstNode)
+                if (specifier.location && specifier.location.endOffset) {
+                    var specifierStr = parsingResult.formula.text.slice(specifier.location.startOffset, specifier.location.endOffset + 1)
+                    rows.push(generator.row('dimensionDeclaration', 'DimensionName', image, specifierStr))
+                }
+            })
+        }
+
 
         // adding asssign statements 
         sourceBlock.children.AssignStatement.forEach((statement, statementIndex) => {
