@@ -122,23 +122,37 @@ function operandSimpleParser(operand: any, builder: any) {
         return;
     }
     if (operandType === "IIFExpression") {
-        
+
         builder.next({ type: "leftBracket", str: '(', tokenType: "LeftParenthesis" });
         var iif = operand.children["IIFExpression"][0];
+
+        builder.next({ type: "leftBracket", str: '(', tokenType: "LeftParenthesis" });
+        expressionParser(iif.children["Expression"][2], builder);
+        builder.next({ type: "rightBracket", str: ')', tokenType: "RightParenthesis" });
+
+        builder.next({ type: "leftBracket", str: '(', tokenType: "LeftParenthesis" });
+        expressionParser(iif.children["Expression"][3], builder);
+        builder.next({ type: "rightBracket", str: ')', tokenType: "RightParenthesis" });
+
+        builder.next({ type: "leftBracket", str: '(', tokenType: "LeftParenthesis" });
         expressionParser(iif.children["Expression"][0], builder);
+        builder.next({ type: "rightBracket", str: ')', tokenType: "RightParenthesis" });
+
+        builder.next({ type: "leftBracket", str: '(', tokenType: "LeftParenthesis" });
         expressionParser(iif.children["Expression"][1], builder);
+        builder.next({ type: "rightBracket", str: ')', tokenType: "RightParenthesis" });
+
         let compareOperator = (iif.children["GreaterThan"] ||
             iif.children["LesserThan"] ||
             iif.children["Equal"] ||
             iif.children["NotEqual"] ||
             iif.children["GreaterThanEqual"] ||
             iif.children["LesserThanEqual"])
-        
-        console.log(compareOperator[0].tokenType.name)
+
         builder.outputQueue.push({ str: compareOperator[0].image, tokenType: compareOperator[0].tokenType.name });
-        expressionParser(iif.children["Expression"][2], builder);
-        expressionParser(iif.children["Expression"][3], builder);
+
         builder.next({ type: "rightBracket", str: ')', tokenType: "RightParenthesis" });
+
         builder.outputQueue.push({ str: "#IIF", tokenType: "IIFCall" });
         return;
     }
