@@ -8,12 +8,21 @@ const prompt = require("prompt-sync")({ sigint: true });
 const fs = require("fs");
 
 var rows = getRows(10);
+if (process.argv[2] === "all") {
+    rows.forEach((row) => {
+        var parsedFormula = parseRow(row.id);
+        createFiles(parsedFormula);
+        var table = convertToTable(parsedFormula);
+        pushToTable(table);
+    })
+} else {
+    var parsedFormula = parseRow(process.argv[2] || "255");
+    createFiles(parsedFormula);
+    var table = convertToTable(parsedFormula);
+    pushToTable(table);
+}
 
-var parsedFormula = parseRow(process.argv[2] || "255");
-var row = rows.find((row) => row.id == process.argv[2]);
-createFiles(parsedFormula);
-var table = convertToTable(parsedFormula);
-async function pushToTable() {
+async function pushToTable(table: FormulaTableRow[]) {
     var connection = await getConnection();
     table.forEach(async (row) => {
         var result = await insert(connection, row);
@@ -28,14 +37,6 @@ async function pushToTable() {
 
 }
 
-async function test() {
-    var connection = await getConnection();
-    const result = await testDB(connection);
-    //@ts-ignore
-    console.log(result.rows ? result.rows : "error")
-}
-
-pushToTable();
 
 function runTest() {
     rows.forEach((row, index) => {
