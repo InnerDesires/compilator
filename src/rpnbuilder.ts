@@ -86,7 +86,17 @@ function operandParser(operand: any, builder: any) {
     }
 }
 
-
+function checkIfFilterTime(expression) {
+    try {
+        if (expression.children['Operand'][0].children['OperandSimple'][0].children['VariableReference'][0].children['FilterRefference'][0].children['Identifier'][0].image === 'time') {
+            return true;
+        }
+        return false;
+    } catch (e) {
+        console.log('Error: FilterTime error')
+        return false;
+    }
+}
 function operandSimpleParser(operand: any, builder: any) {
     let operandType = Object.keys(operand.children)[0];
     if (operandType === "ParenthisExpression") {
@@ -97,16 +107,21 @@ function operandSimpleParser(operand: any, builder: any) {
 
         let varRef = operand.children['VariableReference'][0];
 
-        if (varRef.children['FunctionCall']) {
+        if (varRef.children['FunctionCall'] && !checkIfFilterTime(varRef.children['FunctionCall'][0].children["Expression"][0])) {
             var functionName = varRef.children['Identifier'][0].image;
             var functionCall = varRef.children['FunctionCall'][0];
-            functionCall.children["Expression"].forEach(expression => {
-                builder.next({ type: "leftBracket", str: '(', tokenType: "LeftParenthesis" });
-                expressionParser(expression, builder);
-                builder.next({ type: "rightBracket", str: ')', tokenType: "RightParenthesis" });
-            });
-            builder.outputQueue.push({ str: `${functionCall.children["Expression"].length}`, tokenType: 'AgrumentsCount' });
-            builder.outputQueue.push({ str: `#${functionName}`, tokenType: 'FunctionCall' });
+            if (functionCall.children["Expression"]) {
+                functionCall.children["Expression"].forEach(expression => {
+                    builder.next({ type: "leftBracket", str: '(', tokenType: "LeftParenthesis" });
+                    expressionParser(expression, builder);
+                    builder.next({ type: "rightBracket", str: ')', tokenType: "RightParenthesis" });
+                })
+                builder.outputQueue.push({ str: `${functionCall.children["Expression"].length}`, tokenType: 'AgrumentsCount' });
+                builder.outputQueue.push({ str: `#${functionName}`, tokenType: 'FunctionCall' });
+            } else {
+                builder.outputQueue.push({ str: `${0}`, tokenType: 'AgrumentsCount' });
+                builder.outputQueue.push({ str: `#${functionName}`, tokenType: 'FunctionCall' });
+            }
 
             return;
         }
